@@ -21,7 +21,7 @@ public class CodeFeature {
     }
 
     static CodeFeatureType getTypeFromInfo(String info) {
-        if (info.matches(".+\\(.+\\)\\s")) {
+        if (info.matches(".+\\(.*\\)\\s")) {
             return CodeFeatureType.FUNCTION;
         }
         return null;
