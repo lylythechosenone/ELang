@@ -7,20 +7,23 @@ public class CodeFeature {
     CodeFeatureType type;
     String info;
     Map<String, Object> infoMap;
+    int line;
 
-    CodeFeature(CodeFeatureType type, String info) {
+    CodeFeature(CodeFeatureType type, int line, String info) {
         this.type = type;
         this.info = info;
+        this.line = line;
         this.infoMap = InfoMapFromInfo(this);
     }
 
-    CodeFeature(String info) {
-        this.type = getTypeFromInfo(info);
+    CodeFeature(String info, int line) {
+        this.type = GetTypeFromInfo(info);
         this.info = info;
+        this.line = line;
         this.infoMap = InfoMapFromInfo(this);
     }
 
-    static CodeFeatureType getTypeFromInfo(String info) {
+    static CodeFeatureType GetTypeFromInfo(String info) {
         if (info.matches(".+\\(.*\\)\\s")) {
             return CodeFeatureType.FUNCTION;
         }
@@ -33,7 +36,7 @@ public class CodeFeature {
             toReturn.put("name", feature.info.replaceAll("\\s*\\(.*\\)\\s*", ""));
             toReturn.put("params", feature.info.replaceAll(".+\\(", "").replaceAll("\\)\\s", "").split(",\\s*"));
         } else if (feature.type == CodeFeatureType.FUNCTIONCALL) {
-            toReturn.put("name", feature.info.replaceAll("\\s*\\(.*\\)", ""));
+            toReturn.put("name", feature.info.replaceAll("(\\t|\\s)*(?=[^\\s\\t]+\\s*\\(.*\\))", "").replaceAll("\\s*\\(.*\\)", ""));
             toReturn.put("params", feature.info.replaceAll(".+\\(", "").replaceAll("\\)", "").split(",\\s*"));
         }
         return toReturn;

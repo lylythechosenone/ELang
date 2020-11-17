@@ -53,7 +53,7 @@ public class Main {
 
             // Make sure the given file is an E file
             if (fileString.contains("##E##\n") || fileString.contains("##E##\r\n") || fileString.contains("##E##\r")) {
-                Interpreter interpreter = new Interpreter(fileString.replace("##E##\n", "").replace("##E##\r\n", "").replace("##E##\r", ""), debug); // Create a new Interpreter instance
+                Interpreter interpreter = new Interpreter(fileString.replace("##E##\n", "").replace("##E##\r\n", "").replace("##E##\r", ""), debug, new File(System.getProperty("user.dir")).toURI().relativize(file.toURI()).toString()); // Create a new Interpreter instance
             } else {
                 // Print "Input file is not an E file, or is missing '##E##'" and exit
                 System.err.println("Input file is not an E file, or is missing '##E##'");

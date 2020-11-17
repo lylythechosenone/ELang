@@ -3,8 +3,20 @@ package com.ELang.ELang;
 import java.util.Arrays;
 
 public class Interpreter {
-    Interpreter(String text, boolean debug) {
+    CodeFeature[] codeFeatures;
+    Interpreter interpreterMain;
+    String name;
+    boolean debug;
+
+    Interpreter(String text, boolean debug, String name) {
+        this.name = name;
         Interpret(splitNewlines(toLF(text)), debug);
+    }
+
+    Interpreter(String text, boolean debug, String name, Interpreter interpreterMain) {
+        this.interpreterMain = interpreterMain;
+        this.name = name;
+        InterpretFunction(splitNewlines(toLF(text)), debug);
     }
 
     String toLF(String str) {
@@ -27,6 +39,7 @@ public class Interpreter {
 
     CodeFeature[] splitNewlines(String text) {
         CodeFeature[] toReturn = {};
+        int line = 1;
         char[] charArray = text.toCharArray();
         boolean inBlock = false;
         StringBuilder curLine = new StringBuilder();
@@ -41,12 +54,14 @@ public class Interpreter {
             } else if (charArray[i] == '{') {
                 inBlock = true;
                 toReturn = Arrays.copyOf(toReturn, toReturn.length + 1);
-                toReturn[toReturn.length - 1] = new CodeFeature(curLine.toString());
+                toReturn[toReturn.length - 1] = new CodeFeature(curLine.toString(), line);
                 curLine = new StringBuilder();
-            } else if (curLine.toString().matches(".+\\(.*\\)\n")) {
-                toReturn = Arrays.copyOf(toReturn, toReturn.length + 1);
-                toReturn[toReturn.length - 1] = new CodeFeature(CodeFeatureType.FUNCTIONCALL, curLine.toString());
             } else if (charArray[i] == '\n') {
+                if (curLine.toString().matches(".+\\(.*\\)")) {
+                    toReturn = Arrays.copyOf(toReturn, toReturn.length + 1);
+                    toReturn[toReturn.length - 1] = new CodeFeature(CodeFeatureType.FUNCTIONCALL, line, curLine.toString());
+                }
+                line++;
                 curLine = new StringBuilder();
             } else {
                 curLine.append(charArray[i]);
@@ -54,12 +69,54 @@ public class Interpreter {
         }
         return toReturn;
     }
-    void Interpret(CodeFeature[] codeFeatures, boolean debug) {
+
+    void InterpretFunction(CodeFeature[] codeFeatures, boolean debug) {
+        this.codeFeatures = codeFeatures;
+        this.debug = debug;
         for (int i = 0; i < codeFeatures.length; i++) {
-            System.out.println(i);
-            System.out.println(codeFeatures[i].type + ": " + codeFeatures[i].infoMap.get("name"));
+            if (codeFeatures[i].type == CodeFeatureType.FUNCTIONCALL) {
+                if (interpreterMain.CheckFunction((String) codeFeatures[i].infoMap.get("name"))) {
+                    interpreterMain.RunFunction((String) codeFeatures[i].infoMap.get("name"), (String[]) codeFeatures[i].infoMap.get("params"));
+                } else {
+                    System.err.println("No such function '".concat((String) codeFeatures[i].infoMap.get("name")).concat("'\n\tin function '").concat(name).concat("()'\n\tin file '".concat(interpreterMain.name).concat("'\n\ton line ").concat(Integer.toString(codeFeatures[i].line + 1))));
+                    System.exit(-1);
+                }
+            }
+        }
+    }
+
+    void Interpret(CodeFeature[] codeFeatures, boolean debug) {
+        this.codeFeatures = codeFeatures;
+        this.debug = debug;
+        if (!CheckFunction("Main")) {
+            System.err.println("No 'Main()' function");
+            System.exit(-1);
+        } else {
+            RunFunction("Main", new String[] {""});
+        }
+    }
+
+    boolean CheckFunction(String name) {
+        boolean toReturn = false;
+        for (int i = 0; i < codeFeatures.length; i++) {
             if (codeFeatures[i].type == CodeFeatureType.FUNCTION) {
-                System.out.println("{" + codeFeatures[i].infoMap.get("code") + "}");
+                if (codeFeatures[i].infoMap.get("name").equals(name)) {
+                    toReturn = true;
+                }
+            }
+        }
+        return toReturn;
+    }
+
+    void RunFunction(String name, String[] params) {
+        for (int i = 0; i < codeFeatures.length; i++) {
+            if (codeFeatures[i].type == CodeFeatureType.FUNCTION) {
+                if (codeFeatures[i].infoMap.get("name").equals(name)) {
+                    if (debug) {
+                        System.out.println("Starting function '".concat(name).concat("()'"));
+                    }
+                    Interpreter functionInterpreter = new Interpreter((String) codeFeatures[i].infoMap.get("code"), debug, name, this);
+                }
             }
         }
     }
