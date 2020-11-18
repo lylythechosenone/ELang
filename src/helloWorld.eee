@@ -1,0 +1,10 @@
+##E##
+Main(args) {
+    variable = "Hello, world!"
+    Console.writeLine(variable)
+    SomethingElse()
+}
+
+SomethingElse() {
+    Console.writeLine("Hello, world!")
+}

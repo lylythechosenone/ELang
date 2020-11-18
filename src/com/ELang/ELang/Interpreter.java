@@ -42,12 +42,14 @@ public class Interpreter {
         int line = 1;
         char[] charArray = text.toCharArray();
         boolean inBlock = false;
+        boolean inString = false;
         StringBuilder curLine = new StringBuilder();
         for (int i = 0; i < charArray.length; i++) {
             if (inBlock) {
                 if (charArray[i] == '}') {
                     inBlock = false;
                     toReturn[toReturn.length - 1].infoMap.put("code", curLine.toString());
+                    curLine = new StringBuilder();
                 } else {
                     curLine.append(charArray[i]);
                 }
@@ -60,6 +62,9 @@ public class Interpreter {
                 if (curLine.toString().matches(".+\\(.*\\)")) {
                     toReturn = Arrays.copyOf(toReturn, toReturn.length + 1);
                     toReturn[toReturn.length - 1] = new CodeFeature(CodeFeatureType.FUNCTIONCALL, line, curLine.toString());
+                } else if (curLine.toString().matches(".+\\s*=\\s*.+")) {
+                    toReturn = Arrays.copyOf(toReturn, toReturn.length + 1);
+                    toReturn[toReturn.length - 1] = new CodeFeature(CodeFeatureType.VARIABLE, line, curLine.toString());
                 }
                 line++;
                 curLine = new StringBuilder();
@@ -71,21 +76,37 @@ public class Interpreter {
     }
 
     void InterpretFunction(CodeFeature[] codeFeatures, boolean debug) {
+        CodeFeature.localCodeFeatures = codeFeatures;
         this.codeFeatures = codeFeatures;
         this.debug = debug;
         for (int i = 0; i < codeFeatures.length; i++) {
             if (codeFeatures[i].type == CodeFeatureType.FUNCTIONCALL) {
-                if (interpreterMain.CheckFunction((String) codeFeatures[i].infoMap.get("name"))) {
-                    interpreterMain.RunFunction((String) codeFeatures[i].infoMap.get("name"), (String[]) codeFeatures[i].infoMap.get("params"));
+                if (((String) codeFeatures[i].infoMap.get("name")).matches(".+\\..+")) {
+                    if (GetGlobalNamespace(((String) codeFeatures[i].infoMap.get("name")).replaceAll("\\..+", ""))) {
+                        if (GetGlobalNamespaceFunction(((String) codeFeatures[i].infoMap.get("name")).replaceAll("\\..+", ""), ((String) codeFeatures[i].infoMap.get("name")).replaceAll(".+\\.", ""))) {
+                            RunGlobalNamespaceFunction(((String) codeFeatures[i].infoMap.get("name")).replaceAll("\\..+", ""), ((String) codeFeatures[i].infoMap.get("name")).replaceAll(".+\\.", ""), (String[]) codeFeatures[i].infoMap.get("params"));
+                        } else {
+                            System.err.println("No such function '".concat(((String) codeFeatures[i].infoMap.get("name")).replaceAll(".+(?=\\.)", "")).concat("' in namespace '").concat(((String) codeFeatures[i].infoMap.get("name")).replaceAll("\\..+", "")).concat("'\n\tin function '").concat(name).concat("()'\n\tin file '".concat(interpreterMain.name).concat("'\n\ton line ").concat(Integer.toString(codeFeatures[i].line + 1))));
+                            System.exit(-1);
+                        }
+                    } else {
+                        System.err.println("No such namespace '".concat(((String) codeFeatures[i].infoMap.get("name")).replaceAll("\\..+", "")).concat("'\n\tin function '").concat(name).concat("()'\n\tin file '".concat(interpreterMain.name).concat("'\n\ton line ").concat(Integer.toString(codeFeatures[i].line + 1))));
+                        System.exit(-1);
+                    }
                 } else {
-                    System.err.println("No such function '".concat((String) codeFeatures[i].infoMap.get("name")).concat("'\n\tin function '").concat(name).concat("()'\n\tin file '".concat(interpreterMain.name).concat("'\n\ton line ").concat(Integer.toString(codeFeatures[i].line + 1))));
-                    System.exit(-1);
+                    if (interpreterMain.CheckFunction((String) codeFeatures[i].infoMap.get("name"))) {
+                        interpreterMain.RunFunction((String) codeFeatures[i].infoMap.get("name"), (String[]) codeFeatures[i].infoMap.get("params"));
+                    } else {
+                        System.err.println("No such function '".concat((String) codeFeatures[i].infoMap.get("name")).concat("'\n\tin function '").concat(name).concat("()'\n\tin file '".concat(interpreterMain.name).concat("'\n\ton line ").concat(Integer.toString(codeFeatures[i].line + 1))));
+                        System.exit(-1);
+                    }
                 }
             }
         }
     }
 
     void Interpret(CodeFeature[] codeFeatures, boolean debug) {
+        CodeFeature.globalCodeFeatures = codeFeatures;
         this.codeFeatures = codeFeatures;
         this.debug = debug;
         if (!CheckFunction("Main")) {
@@ -116,6 +137,33 @@ public class Interpreter {
                         System.out.println("Starting function '".concat(name).concat("()'"));
                     }
                     Interpreter functionInterpreter = new Interpreter((String) codeFeatures[i].infoMap.get("code"), debug, name, this);
+                }
+            }
+        }
+    }
+
+    boolean GetGlobalNamespace(String name) {
+        if (name.equals("Console")) {
+            return true;
+        }
+        return false;
+    }
+
+    boolean GetGlobalNamespaceFunction(String namespace, String function) {
+        if (namespace.equals("Console")) {
+            if (function.equals("writeLine")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    void RunGlobalNamespaceFunction(String namespace, String function, String[] params) {
+        if (namespace.equals("Console")) {
+            if (function.equals("writeLine")) {
+                GlobalFuncs.Console.writeLine(params);
+                for (String param : params) {
+                    System.out.println(param);
                 }
             }
         }
