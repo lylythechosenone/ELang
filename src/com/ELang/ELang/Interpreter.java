@@ -69,8 +69,16 @@ public class Interpreter {
                     toReturn = Arrays.copyOf(toReturn, toReturn.length + 1);
                     toReturn[toReturn.length - 1] = new CodeFeature(CodeFeatureType.FUNCTIONCALL, line, curLine.toString());
                 } else if (curLine.toString().matches(".+\\s*=\\s*.+")) {
-                    toReturn = Arrays.copyOf(toReturn, toReturn.length + 1);
-                    toReturn[toReturn.length - 1] = new CodeFeature(CodeFeatureType.VARIABLE, line, curLine.toString());
+                    for (CodeFeature codeFeature : toReturn) {
+                        if (codeFeature.type == CodeFeatureType.VARIABLE) {
+                            if (codeFeature.infoMap.get("name").equals(curLine.toString().replaceAll("(\\s|\\t)*(?=.+\\s*=\\s*.+)", "").replaceAll("\\s*=\\s*.+", ""))) {
+                                codeFeature.infoMap.put("value", curLine.toString().replaceAll(".+\\s*=\\s*", "").replaceAll("(?<!\\\\)\"", "").replaceAll("(?<!\\\\)'", "").replaceAll("\\\\\"", "\"").replaceAll("\\\\'", "'"));
+                            } else {
+                                toReturn = Arrays.copyOf(toReturn, toReturn.length + 1);
+                                toReturn[toReturn.length - 1] = new CodeFeature(CodeFeatureType.VARIABLE, line, curLine.toString());
+                            }
+                        }
+                    }
                 }
                 line++;
                 curLine = new StringBuilder();
