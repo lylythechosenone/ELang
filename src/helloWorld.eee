@@ -2,9 +2,9 @@
 Main(args) {
     variable = "Hello, world!"
     Console.writeLine(variable)
-    SomethingElse()
+    SomethingElse(args)
 }
 
-SomethingElse() {
-    Console.writeLine("Hello, world!")
+SomethingElse(args) {
+    Console.writeLine(args[0])
 }

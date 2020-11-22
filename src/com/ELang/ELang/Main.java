@@ -7,6 +7,7 @@ import java.nio.file.Path;
 
 public class Main {
     static String path = "";
+    static String arguments = "";
     static boolean debug = false;
 
     public static void main(String[] args) throws IOException {
@@ -23,9 +24,11 @@ public class Main {
                     debug = true; // Enable debug mode
                     break;
                 default:
-                    // Path can be passed without --arg
+                    // Path is passed without --path
                     if (path.equals("")) {
                         path = arg; // Set path
+                    } else if (arguments.equals("")) {
+                        arguments = arg;
                     } else {
                         // Print "Unknown argument '{given argument}'" and exit
                         System.err.println("Unknown argument '".concat(arg).concat("'"));
@@ -53,7 +56,7 @@ public class Main {
 
             // Make sure the given file is an E file
             if (fileString.contains("##E##\n") || fileString.contains("##E##\r\n") || fileString.contains("##E##\r")) {
-                Interpreter interpreter = new Interpreter(fileString.replace("##E##\n", "").replace("##E##\r\n", "").replace("##E##\r", ""), debug, new File(System.getProperty("user.dir")).toURI().relativize(file.toURI()).toString()); // Create a new Interpreter instance
+                Interpreter interpreter = new Interpreter(fileString.replace("##E##\n", "").replace("##E##\r\n", "").replace("##E##\r", ""), debug, new File(System.getProperty("user.dir")).toURI().relativize(file.toURI()).toString(), arguments); // Create a new Interpreter instance
             } else {
                 // Print "Input file is not an E file, or is missing '##E##'" and exit
                 System.err.println("Input file is not an E file, or is missing '##E##'");

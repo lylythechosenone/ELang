@@ -6,17 +6,19 @@ public class Interpreter {
     CodeFeature[] codeFeatures;
     Interpreter interpreterMain;
     String name;
+    String args;
     boolean debug;
 
-    Interpreter(String text, boolean debug, String name) {
+    Interpreter(String text, boolean debug, String name, String args) {
         this.name = name;
+        this.args = args;
         Interpret(splitNewlines(toLF(text)), debug);
     }
 
-    Interpreter(String text, boolean debug, String name, Interpreter interpreterMain) {
+    Interpreter(String text, boolean debug, String name, Interpreter interpreterMain, CodeFeature[] startWith) {
         this.interpreterMain = interpreterMain;
         this.name = name;
-        InterpretFunction(splitNewlines(toLF(text)), debug);
+        InterpretFunction(splitNewlines(toLF(text), startWith), debug);
     }
 
     String toLF(String str) {
@@ -38,7 +40,11 @@ public class Interpreter {
     }
 
     CodeFeature[] splitNewlines(String text) {
-        CodeFeature[] toReturn = {};
+        return splitNewlines(text, null);
+    }
+
+    CodeFeature[] splitNewlines(String text, CodeFeature[] startWith) {
+        CodeFeature[] toReturn = startWith != null ? startWith : new CodeFeature[] {};
         int line = 1;
         char[] charArray = text.toCharArray();
         boolean inBlock = false;
@@ -71,12 +77,12 @@ public class Interpreter {
             } else {
                 curLine.append(charArray[i]);
             }
+            CodeFeature.localCodeFeatures = toReturn;
         }
         return toReturn;
     }
 
     void InterpretFunction(CodeFeature[] codeFeatures, boolean debug) {
-        CodeFeature.localCodeFeatures = codeFeatures;
         this.codeFeatures = codeFeatures;
         this.debug = debug;
         for (int i = 0; i < codeFeatures.length; i++) {
@@ -113,7 +119,7 @@ public class Interpreter {
             System.err.println("No 'Main()' function");
             System.exit(-1);
         } else {
-            RunFunction("Main", new String[] {""});
+            RunFunction("Main", new String[] {args});
         }
     }
 
@@ -136,7 +142,18 @@ public class Interpreter {
                     if (debug) {
                         System.out.println("Starting function '".concat(name).concat("()'"));
                     }
-                    Interpreter functionInterpreter = new Interpreter((String) codeFeatures[i].infoMap.get("code"), debug, name, this);
+                    CodeFeature[] startWith = new CodeFeature[] {};
+                    if (params.length != ((String[]) codeFeatures[i].infoMap.get("params")).length) {
+                        System.err.println("Function call with incorrect number of arguments");
+                        System.exit(-1);
+                    }
+                    for (int j = 0; j < params.length; j++) {
+                        startWith = Arrays.copyOf(startWith, startWith.length + 1);
+                        startWith[startWith.length - 1] = new CodeFeature(CodeFeatureType.VARIABLE, -1, "");
+                        startWith[startWith.length - 1].infoMap.put("name", ((String[]) codeFeatures[i].infoMap.get("params"))[j]);
+                        startWith[startWith.length - 1].infoMap.put("value", params[j]);
+                    }
+                    Interpreter functionInterpreter = new Interpreter((String) codeFeatures[i].infoMap.get("code"), debug, name, this, startWith);
                 }
             }
         }
@@ -162,9 +179,6 @@ public class Interpreter {
         if (namespace.equals("Console")) {
             if (function.equals("writeLine")) {
                 GlobalFuncs.Console.writeLine(params);
-                for (String param : params) {
-                    System.out.println(param);
-                }
             }
         }
     }

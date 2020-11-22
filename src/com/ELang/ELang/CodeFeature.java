@@ -40,10 +40,27 @@ public class CodeFeature {
             toReturn.put("params", feature.info.replaceAll(".+\\(", "").replaceAll("\\)\\s", "").split(",\\s*"));
         } else if (feature.type == CodeFeatureType.FUNCTIONCALL) {
             toReturn.put("name", feature.info.replaceAll("(\\t|\\s)*(?=[^\\s\\t]+\\s*\\(.*\\))", "").replaceAll("\\s*\\(.*\\)", ""));
-            String[] params = feature.info.replaceAll(".+\\(", "").replaceAll("\\)", "").split(",\\s*(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+            String[] params = feature.info.replaceAll(".+\\(", "").replaceAll("\\)", "").split(",\\s*(?=(?:[^\"']*(\"|')[^\"']*(\"|'))*[^\"']*[^']*$)");
             for (int i = 0; i < params.length; i++) {
-                if (params[i].matches("[^\\\\]\".+[^\\\\]\"")) {
-                    params[i] = params[i].replaceAll("(?<!\\\\)\"", "");
+                if (params[i].matches("(?<=([^\\\\]|^))\".+[^\\\\]\"") || params[i].matches("(?<=([^\\\\]|^))'.+[^\\\\]'")) {
+                    params[i] = params[i].replaceAll("(?<!\\\\)\"", "").replaceAll("(?<!\\\\)'", "").replaceAll("\\\\\"", "\"").replaceAll("\\\\'", "'");
+                } else if (params[i].matches(".+\\[[0-9]]")) {
+                    for (CodeFeature codeFeature : globalCodeFeatures) {
+                        if (codeFeature.type == CodeFeatureType.VARIABLE) {
+                            if (codeFeature.infoMap.get("name").equals(params[i])) {
+                                params[i] = ((String) codeFeature.infoMap.get("value")).split(",\\s*(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)")[Integer.parseInt(params[i].replaceAll(".+\\[", "").replaceAll("]", ""))].replaceAll("(?<!\\\\)\"", "").replaceAll("(?<!\\\\)'", "");
+                            }
+                        }
+                    }
+                    if (localCodeFeatures != null) {
+                        for (CodeFeature codeFeature : localCodeFeatures) {
+                            if (codeFeature.type == CodeFeatureType.VARIABLE) {
+                                if (codeFeature.infoMap.get("name").equals(params[i].replaceAll("\\[[0-9]]", ""))) {
+                                    params[i] = ((String) codeFeature.infoMap.get("value")).split(",\\s*(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)")[Integer.parseInt(params[i].replaceAll(".+\\[", "").replaceAll("]", ""))].replaceAll("(?<!\\\\)\"", "").replaceAll("(?<!\\\\)'", "");
+                                }
+                            }
+                        }
+                    }
                 } else if (!params[i].matches("[0-9]")) {
                     for (CodeFeature codeFeature : globalCodeFeatures) {
                         if (codeFeature.type == CodeFeatureType.VARIABLE) {
@@ -66,13 +83,8 @@ public class CodeFeature {
             toReturn.put("params", params);
         } else if (feature.type == CodeFeatureType.VARIABLE) {
             toReturn.put("name", feature.info.replaceAll("(\\s|\\t)*(?=.+\\s*=\\s*.+)", "").replaceAll("\\s*=\\s*.+", ""));
-            toReturn.put("value", feature.info.replaceAll(".+\\s*=\\s*", "").replaceAll("(?<!\\\\)\"", ""));
+            toReturn.put("value", feature.info.replaceAll(".+\\s*=\\s*", "").replaceAll("(?<!\\\\)\"", "").replaceAll("(?<!\\\\)'", "").replaceAll("\\\\\"", "\"").replaceAll("\\\\'", "'"));
         }
         return toReturn;
-    }
-
-    static String GetStringCode(boolean newCode) {
-        stringCodes = newCode ? stringCodes + 1 : stringCodes;
-        return "$$STR$$" + stringCodes + "$$STR$$";
     }
 }
